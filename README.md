@@ -36,7 +36,7 @@ flutter doctor
 ```sh
 flutter pub get
 ```
-### 6. Connect a Device or Start an Emulator
+### 5. Connect a Device or Start an Emulator
 - To run on a **physical device**, enable **USB debugging** (Android) or set up your device with Xcode (iOS).
 - To run on an **emulator**, open **Android Studio** or **VS Code** and start an emulator.
 - List available devices:
@@ -44,7 +44,7 @@ flutter pub get
   flutter devices
   ```
 
-### 7. Run the Flutter App
+### 6. Run the Flutter App
 ```sh
 flutter run
 ```
