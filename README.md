@@ -61,4 +61,4 @@ flutter run -d <device_id>
   ```
 ### To test this app without running the project, here is the link to download the apk
 - **Flutter SDK** ([Download](https://drive.google.com/file/d/1rItCc4tzKtSJAaWZK6KP0xBxuMKmmJ8B/view?usp=sharing))
-### 🎉 Your Flutter project is now ready to run! 🚀
+### 🎉 The project is now ready to run! 🚀
