@@ -63,6 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
             if (state is SuccessFetchingPostsState) {
               _nextSart = _nextSart + state.response.length;
               _posts.addAll(state.response);
+              loadMore = false;
               setState(() {});
             }
 
@@ -99,13 +100,19 @@ class _HomeScreenState extends State<HomeScreen> {
               return Scaffold(
                 backgroundColor: Theme.of(context).primaryColor,
                 body: CustomMaterialIndicator(
-                  onRefresh: () => _fetchPosts(), // Your refresh logic
+                  onRefresh: () async {
+                    _start = 0;
+                    _nextSart = 0;
+                    _posts.clear();
+                    setState(() {});
+                    _fetchPosts();
+                  }, // Your refresh logic
                   backgroundColor: Colors.white,
                   indicatorBuilder: (context, controller) {
                     return Padding(
                       padding: const EdgeInsets.all(6.0),
                       child: CircularProgressIndicator(
-                        color: Colors.redAccent,
+                        color: Theme.of(context).primaryColor,
                         value: controller.state.isLoading
                             ? null
                             : min(controller.value, 1.0),
@@ -126,26 +133,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                         ),
                       ),
-                      if ((connectivityState is CurrentConnectivityStatus &&
-                              connectivityState.status ==
-                                  InternetStatus.disconnected) ||
-                          state is ErrorFetchingPostsState)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8.0),
-                          child: Text(
-                            "${state is ErrorFetchingPostsState ? 'Error occurred' : 'No internet access'}, loaded cached post",
-                            style: Theme.of(context)
-                                .textTheme
-                                .displaySmall!
-                                .copyWith(
-                                  color: Colors.redAccent,
-                                ),
-                          ),
-                        ),
                       Expanded(
                         child: CustomCard(
                           color: Colors.white,
+                          radius: BorderRadius.only(
+                            topLeft: Radius.circular(30),
+                            topRight: Radius.circular(30),
+                          ),
                           child: (state is ErrorFetchingPostsState &&
                                       state.posts.isEmpty) ||
                                   (_cachedPosts.isEmpty &&
@@ -178,7 +172,29 @@ class _HomeScreenState extends State<HomeScreen> {
                                       : null,
                                 )
                               : Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
+                                    SizedBox(
+                                      height: 16,
+                                    ),
+                                    if ((connectivityState
+                                                is CurrentConnectivityStatus &&
+                                            connectivityState.status ==
+                                                InternetStatus.disconnected) ||
+                                        state is ErrorFetchingPostsState)
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 16, vertical: 8.0),
+                                        child: Text(
+                                          "${state is ErrorFetchingPostsState ? 'Error occurred' : 'No internet access'}, loaded cached post",
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .displayMedium!
+                                              .copyWith(
+                                                color: Colors.redAccent,
+                                              ),
+                                        ),
+                                      ),
                                     Expanded(
                                       child: ListView.builder(
                                         itemCount: state

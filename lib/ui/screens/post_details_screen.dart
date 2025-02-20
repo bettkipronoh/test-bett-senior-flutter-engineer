@@ -45,11 +45,15 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
   final ScrollController _scrollController = ScrollController();
 
   void scrollToTop() {
-    _scrollController.animateTo(
-      0.0,
-      duration: Duration(milliseconds: 500), // Adjust speed
-      curve: Curves.easeInOut, // Smooth animation
-    );
+    try {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0.0,
+          duration: Duration(milliseconds: 500), // Adjust speed
+          curve: Curves.easeInOut, // Smooth animation
+        );
+      }
+    } catch (_) {}
   }
 
   @override
@@ -108,7 +112,7 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
                               padding:
                                   const EdgeInsets.symmetric(vertical: 8.0),
                               child: Text(
-                                  'Comments (${state is SuccessFetchingCommentsState ? state.comments.length : '-'})'),
+                                  "Comments ${state is SuccessFetchingCommentsState ? '${state.comments.length}' : ''}"),
                             ),
                             InkWell(
                               onTap: () {
@@ -143,7 +147,15 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
                         if (state is ErrorFetchingCommentsState)
                           Padding(
                             padding: const EdgeInsets.all(16.0),
-                            child: Text("${state.message}"),
+                            child: Text(
+                              state.message,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(
+                                    color: Colors.redAccent,
+                                  ),
+                            ),
                           )
                       ],
                     ),
