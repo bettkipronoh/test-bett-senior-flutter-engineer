@@ -10,7 +10,8 @@ final class FetchingPostsState extends PostsState {}
 //State when there is an error fetching the posts
 final class ErrorFetchingPostsState extends PostsState {
   final String message;
-  ErrorFetchingPostsState(this.message);
+  final List<Post> posts;
+  ErrorFetchingPostsState({required this.message, required this.posts});
 }
 
 //State when there is an error fetching the posts

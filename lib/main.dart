@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hive_flutter/adapters.dart';
 import 'package:posts/ui/screens/home_screen.dart';
 import 'package:posts/ui/screens/post_details_screen.dart';
 
+import 'bloc/comments_bloc/comments_bloc.dart';
 import 'bloc/connectivity/connectivity_cubit.dart';
 import 'bloc/posts_bloc/posts_bloc.dart';
+import 'model/post_model.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Hive.initFlutter();
+  Hive.registerAdapter(PostAdapter()); // Register adapter
+  await Hive.openBox<Post>('posts');
   runApp(const MyApp());
 }
 
@@ -20,6 +27,9 @@ class MyApp extends StatelessWidget {
       providers: [
         BlocProvider(
           create: (context) => PostsBloc(),
+        ),
+        BlocProvider(
+          create: (context) => CommentsBloc(),
         ),
         BlocProvider(
           create: (context) => ConnectivityCubit()..listenToConnection(),
@@ -39,7 +49,7 @@ class MyApp extends StatelessWidget {
 
   ThemeData themeData() {
     return ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+      colorScheme: ColorScheme.fromSeed(seedColor: Colors.tealAccent),
       useMaterial3: true,
       textTheme: const TextTheme(
         titleLarge: TextStyle(

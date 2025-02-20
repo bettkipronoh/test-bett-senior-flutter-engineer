@@ -12,8 +12,7 @@ class AppException implements Exception {
 
 class FetchDataException extends AppException {
   FetchDataException([message])
-      : super(message ?? "",
-            "Error During Communication${message == null ? '' : ', '}");
+      : super("", "Error During Communication,check your internet access");
 }
 
 class BadRequestException extends AppException {

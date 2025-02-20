@@ -4,8 +4,11 @@ import 'package:internet_connection_checker_plus/internet_connection_checker_plu
 import 'package:posts/bloc/connectivity/connectivity_cubit.dart';
 import 'package:posts/bloc/posts_bloc/posts_bloc.dart';
 import 'package:posts/model/post_model.dart';
+import 'package:posts/services/post_db.dart';
+import 'package:posts/ui/widgets/custom_button.dart';
 import 'package:posts/ui/widgets/custom_card.dart';
 import 'package:posts/ui/widgets/empty_list_widget.dart';
+import 'package:posts/ui/widgets/loading_shimmer.dart';
 import 'package:posts/utilities/extensions.dart';
 import 'package:posts/utilities/snack_bar.dart';
 
@@ -17,17 +20,36 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  late ScrollController listScrollController;
+  int _nextSart = 0;
+  int _start = 0;
   @override
   void initState() {
+    listScrollController = ScrollController()..addListener(_scrollListener);
     _fetchPosts();
     super.initState();
   }
 
+  bool loadMore = false;
+  _scrollListener() {
+    if (listScrollController.position.maxScrollExtent ==
+        listScrollController.offset) {
+      loadMore = true;
+    } else {
+      loadMore = false;
+    }
+    setState(() {});
+  }
+
   _fetchPosts() {
-    context.read<PostsBloc>().add(FetchPostsEvent());
+    if (_start < _nextSart || _nextSart == 0) {
+      _start = _nextSart;
+      context.read<PostsBloc>().add(FetchPostsEvent(_start));
+    }
   }
 
   List<Post> _posts = [];
+  List<Post> _cachedPosts = [];
 
   @override
   Widget build(BuildContext context) {
@@ -36,11 +58,16 @@ class _HomeScreenState extends State<HomeScreen> {
         BlocListener<PostsBloc, PostsState>(
           listener: (context, state) {
             if (state is SuccessFetchingPostsState) {
-              _posts = state.response;
+              _nextSart = _nextSart + state.response.length;
+              _posts.addAll(state.response);
               setState(() {});
             }
 
             if (state is ErrorFetchingPostsState) {
+              _cachedPosts = state.posts;
+              _nextSart = 10;
+              _start = 0;
+              setState(() {});
               showSnackBar(context, state.message, err: true);
             }
           },
@@ -54,6 +81,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   postState is PostsInitial) {
                 _fetchPosts();
               }
+            } else if (state is CurrentConnectivityStatus &&
+                state.status == InternetStatus.disconnected) {
+              _cachedPosts = PostDB.getAllPosts();
+              setState(() {});
             }
           },
         ),
@@ -77,13 +108,15 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                       ),
                     ),
-                    if (connectivityState is CurrentConnectivityStatus &&
-                        connectivityState.status == InternetStatus.connected)
+                    if ((connectivityState is CurrentConnectivityStatus &&
+                            connectivityState.status ==
+                                InternetStatus.disconnected) ||
+                        state is ErrorFetchingPostsState)
                       Padding(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 8.0),
                         child: Text(
-                          "DISCONNECTED",
+                          "${state is ErrorFetchingPostsState ? 'Error occurred' : 'No internet access'}, loaded cached post",
                           style: Theme.of(context)
                               .textTheme
                               .displaySmall!
@@ -95,14 +128,22 @@ class _HomeScreenState extends State<HomeScreen> {
                     Expanded(
                       child: CustomCard(
                         color: Colors.white,
-                        child: state is ErrorFetchingPostsState
+                        child: (state is ErrorFetchingPostsState &&
+                                    state.posts.isEmpty) ||
+                                (_cachedPosts.isEmpty &&
+                                    connectivityState
+                                        is CurrentConnectivityStatus &&
+                                    connectivityState.status ==
+                                        InternetStatus.disconnected)
                             ? EmptyWidget(
                                 description: connectivityState
                                             is CurrentConnectivityStatus &&
                                         connectivityState.status ==
                                             InternetStatus.disconnected
                                     ? "No internet connection"
-                                    : state.message,
+                                    : state is ErrorFetchingPostsState
+                                        ? state.message
+                                        : "",
                                 image:
                                     "assets/lottie/${connectivityState is CurrentConnectivityStatus && connectivityState.status == InternetStatus.disconnected ? 'connection' : 'empty'}.json",
                                 onClick: connectivityState
@@ -118,41 +159,55 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ? 'Retry'
                                     : null,
                               )
-                            : ListView.builder(
-                                itemCount: _posts.length,
-                                shrinkWrap: true,
-                                itemBuilder: (context, index) {
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8.0, vertical: 4),
-                                    child: Card(
-                                      color: Colors.white,
-                                      child: ListTile(
-                                        onTap: () => Navigator.pushNamed(
-                                            context, 'post_details',
-                                            arguments: _posts[index]),
-                                        title: Text(
-                                          _posts[index].title != null
-                                              ? _posts[index]
-                                                  .title!
-                                                  .capitalize()
-                                              : '',
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleMedium,
-                                        ),
-                                        subtitle: Text(
-                                          '${_posts[index].body}',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .displaySmall,
-                                        ),
-                                      ),
+                            : Column(
+                                children: [
+                                  Expanded(
+                                    child: ListView.builder(
+                                      itemCount: state
+                                                  is ErrorFetchingPostsState ||
+                                              (connectivityState
+                                                      is CurrentConnectivityStatus &&
+                                                  connectivityState.status ==
+                                                      InternetStatus
+                                                          .disconnected)
+                                          ? _cachedPosts.length
+                                          : _posts.isEmpty &&
+                                                  state is FetchingPostsState
+                                              ? 10
+                                              : _posts.length,
+                                      shrinkWrap: true,
+                                      controller: listScrollController,
+                                      itemBuilder: (context, index) => state
+                                                  is ErrorFetchingPostsState ||
+                                              (connectivityState
+                                                      is CurrentConnectivityStatus &&
+                                                  connectivityState.status ==
+                                                      InternetStatus
+                                                          .disconnected)
+                                          ? _postCard(_cachedPosts[index])
+                                          : _posts.isEmpty &&
+                                                  state is FetchingPostsState
+                                              ? LoadingShimmer()
+                                              : _postCard(_posts[index]),
                                     ),
-                                  );
-                                }),
+                                  ),
+                                  _posts.isNotEmpty &&
+                                          loadMore &&
+                                          state is SuccessFetchingPostsState
+                                      ? Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            CustomButton(
+                                                title: 'Load more',
+                                                onPressed: () {
+                                                  _fetchPosts();
+                                                }),
+                                          ],
+                                        )
+                                      : SizedBox()
+                                ],
+                              ),
                       ),
                     )
                   ],
@@ -161,6 +216,29 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           );
         },
+      ),
+    );
+  }
+
+  Widget _postCard(Post post) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4),
+      child: Card(
+        color: Colors.white,
+        child: ListTile(
+          onTap: () =>
+              Navigator.pushNamed(context, 'post_details', arguments: post),
+          title: Text(
+            post.title != null ? post.title!.capitalize() : '',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          subtitle: Text(
+            '${post.body}',
+            style: Theme.of(context).textTheme.displaySmall,
+          ),
+        ),
       ),
     );
   }
