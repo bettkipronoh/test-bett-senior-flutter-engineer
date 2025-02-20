@@ -1,3 +1,6 @@
+import 'dart:math';
+
+import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
@@ -95,123 +98,139 @@ class _HomeScreenState extends State<HomeScreen> {
             builder: (context, connectivityState) {
               return Scaffold(
                 backgroundColor: Theme.of(context).primaryColor,
-                body: SafeArea(
-                    child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(18.0),
-                      child: Text(
-                        "Posts",
-                        style: Theme.of(context).textTheme.titleLarge!.copyWith(
-                              color: Colors.white,
-                            ),
+                body: CustomMaterialIndicator(
+                  onRefresh: () => _fetchPosts(), // Your refresh logic
+                  backgroundColor: Colors.white,
+                  indicatorBuilder: (context, controller) {
+                    return Padding(
+                      padding: const EdgeInsets.all(6.0),
+                      child: CircularProgressIndicator(
+                        color: Colors.redAccent,
+                        value: controller.state.isLoading
+                            ? null
+                            : min(controller.value, 1.0),
                       ),
-                    ),
-                    if ((connectivityState is CurrentConnectivityStatus &&
-                            connectivityState.status ==
-                                InternetStatus.disconnected) ||
-                        state is ErrorFetchingPostsState)
+                    );
+                  },
+                  child: SafeArea(
+                      child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8.0),
+                        padding: const EdgeInsets.all(18.0),
                         child: Text(
-                          "${state is ErrorFetchingPostsState ? 'Error occurred' : 'No internet access'}, loaded cached post",
-                          style: Theme.of(context)
-                              .textTheme
-                              .displaySmall!
-                              .copyWith(
-                                color: Colors.redAccent,
-                              ),
+                          "Posts",
+                          style:
+                              Theme.of(context).textTheme.titleLarge!.copyWith(
+                                    color: Colors.white,
+                                  ),
                         ),
                       ),
-                    Expanded(
-                      child: CustomCard(
-                        color: Colors.white,
-                        child: (state is ErrorFetchingPostsState &&
-                                    state.posts.isEmpty) ||
-                                (_cachedPosts.isEmpty &&
-                                    connectivityState
-                                        is CurrentConnectivityStatus &&
-                                    connectivityState.status ==
-                                        InternetStatus.disconnected)
-                            ? EmptyWidget(
-                                description: connectivityState
-                                            is CurrentConnectivityStatus &&
-                                        connectivityState.status ==
-                                            InternetStatus.disconnected
-                                    ? "No internet connection"
-                                    : state is ErrorFetchingPostsState
-                                        ? state.message
-                                        : "",
-                                image:
-                                    "assets/lottie/${connectivityState is CurrentConnectivityStatus && connectivityState.status == InternetStatus.disconnected ? 'connection' : 'empty'}.json",
-                                onClick: connectivityState
-                                            is CurrentConnectivityStatus &&
-                                        connectivityState.status ==
-                                            InternetStatus.connected
-                                    ? () => _fetchPosts()
-                                    : null,
-                                buttonTitle: connectivityState
-                                            is CurrentConnectivityStatus &&
-                                        connectivityState.status ==
-                                            InternetStatus.connected
-                                    ? 'Retry'
-                                    : null,
-                              )
-                            : Column(
-                                children: [
-                                  Expanded(
-                                    child: ListView.builder(
-                                      itemCount: state
-                                                  is ErrorFetchingPostsState ||
-                                              (connectivityState
-                                                      is CurrentConnectivityStatus &&
-                                                  connectivityState.status ==
-                                                      InternetStatus
-                                                          .disconnected)
-                                          ? _cachedPosts.length
-                                          : _posts.isEmpty &&
-                                                  state is FetchingPostsState
-                                              ? 10
-                                              : _posts.length,
-                                      shrinkWrap: true,
-                                      controller: listScrollController,
-                                      itemBuilder: (context, index) => state
-                                                  is ErrorFetchingPostsState ||
-                                              (connectivityState
-                                                      is CurrentConnectivityStatus &&
-                                                  connectivityState.status ==
-                                                      InternetStatus
-                                                          .disconnected)
-                                          ? _postCard(_cachedPosts[index])
-                                          : _posts.isEmpty &&
-                                                  state is FetchingPostsState
-                                              ? LoadingShimmer()
-                                              : _postCard(_posts[index]),
+                      if ((connectivityState is CurrentConnectivityStatus &&
+                              connectivityState.status ==
+                                  InternetStatus.disconnected) ||
+                          state is ErrorFetchingPostsState)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8.0),
+                          child: Text(
+                            "${state is ErrorFetchingPostsState ? 'Error occurred' : 'No internet access'}, loaded cached post",
+                            style: Theme.of(context)
+                                .textTheme
+                                .displaySmall!
+                                .copyWith(
+                                  color: Colors.redAccent,
+                                ),
+                          ),
+                        ),
+                      Expanded(
+                        child: CustomCard(
+                          color: Colors.white,
+                          child: (state is ErrorFetchingPostsState &&
+                                      state.posts.isEmpty) ||
+                                  (_cachedPosts.isEmpty &&
+                                      connectivityState
+                                          is CurrentConnectivityStatus &&
+                                      connectivityState.status ==
+                                          InternetStatus.disconnected)
+                              ? EmptyWidget(
+                                  description: connectivityState
+                                              is CurrentConnectivityStatus &&
+                                          connectivityState.status ==
+                                              InternetStatus.disconnected
+                                      ? "No internet connection"
+                                      : state is ErrorFetchingPostsState
+                                          ? state.message
+                                          : "",
+                                  image:
+                                      "assets/lottie/${connectivityState is CurrentConnectivityStatus && connectivityState.status == InternetStatus.disconnected ? 'connection' : 'empty'}.json",
+                                  onClick: connectivityState
+                                              is CurrentConnectivityStatus &&
+                                          connectivityState.status ==
+                                              InternetStatus.connected
+                                      ? () => _fetchPosts()
+                                      : null,
+                                  buttonTitle: connectivityState
+                                              is CurrentConnectivityStatus &&
+                                          connectivityState.status ==
+                                              InternetStatus.connected
+                                      ? 'Retry'
+                                      : null,
+                                )
+                              : Column(
+                                  children: [
+                                    Expanded(
+                                      child: ListView.builder(
+                                        itemCount: state
+                                                    is ErrorFetchingPostsState ||
+                                                (connectivityState
+                                                        is CurrentConnectivityStatus &&
+                                                    connectivityState.status ==
+                                                        InternetStatus
+                                                            .disconnected)
+                                            ? _cachedPosts.length
+                                            : _posts.isEmpty &&
+                                                    state is FetchingPostsState
+                                                ? 10
+                                                : _posts.length,
+                                        shrinkWrap: true,
+                                        controller: listScrollController,
+                                        itemBuilder: (context, index) => state
+                                                    is ErrorFetchingPostsState ||
+                                                (connectivityState
+                                                        is CurrentConnectivityStatus &&
+                                                    connectivityState.status ==
+                                                        InternetStatus
+                                                            .disconnected)
+                                            ? _postCard(_cachedPosts[index])
+                                            : _posts.isEmpty &&
+                                                    state is FetchingPostsState
+                                                ? LoadingShimmer()
+                                                : _postCard(_posts[index]),
+                                      ),
                                     ),
-                                  ),
-                                  _posts.isNotEmpty &&
-                                          loadMore &&
-                                          state is SuccessFetchingPostsState
-                                      ? Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            CustomButton(
-                                                title: 'Load more',
-                                                onPressed: () {
-                                                  _fetchPosts();
-                                                }),
-                                          ],
-                                        )
-                                      : SizedBox()
-                                ],
-                              ),
-                      ),
-                    )
-                  ],
-                )),
+                                    _posts.isNotEmpty &&
+                                            loadMore &&
+                                            state is SuccessFetchingPostsState
+                                        ? Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              CustomButton(
+                                                  title: 'Load more',
+                                                  onPressed: () {
+                                                    _fetchPosts();
+                                                  }),
+                                            ],
+                                          )
+                                        : SizedBox()
+                                  ],
+                                ),
+                        ),
+                      )
+                    ],
+                  )),
+                ),
               );
             },
           );
